@@ -29,6 +29,8 @@ void atender_cliente(int num_caixa);
 void fechar_caixa(int num_caixa);
 void listar_clientes();
 void listar_status_caixas();
+int contar_caixas_abertos();
+int existem_clientes_em_filas();
 void menu();
 
 void inicializar_caixas() {
@@ -93,8 +95,53 @@ void fechar_caixa(int num_caixa) {
         printf("Caixa %d já está fechado.\n", num_caixa);
         return;
     }
+
+    // Verifica se há clientes em filas
+    if (existem_clientes_em_filas() && contar_caixas_abertos() == 1) {
+        printf("Erro: Não é possível fechar o último caixa aberto enquanto houver clientes para atender.\n");
+        return;
+    }
+
+    // Verifica se há outro caixa aberto para transferir os clientes
+    int outro_caixa = -1;
+    for (int i = 0; i < MAX_CAIXAS; i++) {
+        if (caixas[i].aberto && caixas[i].numero != num_caixa) {
+            outro_caixa = caixas[i].numero;
+            break;
+        }
+    }
+
+    if (outro_caixa == -1) {
+        printf("Erro: Não há outro caixa aberto para transferir os clientes.\n");
+        return;
+    }
+
+    // Transferir clientes para outro caixa aberto
+    Cliente *c = caixas[num_caixa - 1].fila;
+    while (c) {
+        Cliente *prox = c->prox;
+        inserir_cliente(outro_caixa, c);
+        c = prox;
+    }
+
+    caixas[num_caixa - 1].fila = NULL;
     caixas[num_caixa - 1].aberto = 0;
-    printf("Caixa %d fechado.\n", num_caixa);
+    printf("Caixa %d fechado. Clientes transferidos para o caixa %d.\n", num_caixa, outro_caixa);
+}
+
+int contar_caixas_abertos() {
+    int count = 0;
+    for (int i = 0; i < MAX_CAIXAS; i++) {
+        if (caixas[i].aberto) count++;
+    }
+    return count;
+}
+
+int existem_clientes_em_filas() {
+    for (int i = 0; i < MAX_CAIXAS; i++) {
+        if (caixas[i].fila != NULL) return 1;
+    }
+    return 0;
 }
 
 void listar_clientes() {
@@ -121,8 +168,8 @@ void menu() {
     do {
         printf("\n1. Cadastrar Cliente\n2. Atender Cliente\n3. Fechar Caixa\n4. Listar Clientes\n5. Status dos Caixas\n0. Sair\nEscolha: ");
         if (scanf("%d", &opcao) != 1) {
-            printf("Entrada inválida!\n");
-            while (getchar() != '\n');
+            printf("Entrada inválida! Digite um número.\n");
+            while (getchar() != '\n'); // Limpa o buffer de entrada
             continue;
         }
         switch (opcao) {
@@ -132,34 +179,63 @@ void menu() {
                 printf("Nome: "); scanf("%s", nome);
                 printf("CPF: "); scanf("%s", cpf);
                 if (!validar_cpf(cpf)) {
-                    printf("CPF inválido!\n");
+                    printf("CPF inválido! Deve conter exatamente 11 dígitos.\n");
                     break;
                 }
                 printf("Prioridade (1-Alta, 2-Média, 3-Baixa): ");
-                scanf("%d", &prioridade);
-                printf("Número de Itens: "); scanf("%d", &itens);
-                printf("Número do Caixa (1-5): "); scanf("%d", &num_caixa);
+                if (scanf("%d", &prioridade) != 1 || prioridade < 1 || prioridade > 3) {
+                    printf("Prioridade inválida! Digite um valor entre 1 e 3.\n");
+                    while (getchar() != '\n'); // Limpa o buffer de entrada
+                    break;
+                }
+                printf("Número de Itens: ");
+                if (scanf("%d", &itens) != 1 || itens < 0) {
+                    printf("Número de itens inválido! Digite um valor positivo.\n");
+                    while (getchar() != '\n'); // Limpa o buffer de entrada
+                    break;
+                }
+                printf("Número do Caixa (1-5): ");
+                if (scanf("%d", &num_caixa) != 1 || num_caixa < 1 || num_caixa > MAX_CAIXAS) {
+                    printf("Número do caixa inválido! Digite um valor entre 1 e %d.\n", MAX_CAIXAS);
+                    while (getchar() != '\n'); // Limpa o buffer de entrada
+                    break;
+                }
                 inserir_cliente(num_caixa, criar_cliente(nome, cpf, prioridade, itens));
                 break;
             }
-            case 2:
-                { int num_caixa;
-                printf("Número do Caixa: "); scanf("%d", &num_caixa);
+            case 2: {
+                int num_caixa;
+                printf("Número do Caixa: ");
+                if (scanf("%d", &num_caixa) != 1 || num_caixa < 1 || num_caixa > MAX_CAIXAS) {
+                    printf("Número do caixa inválido! Digite um valor entre 1 e %d.\n", MAX_CAIXAS);
+                    while (getchar() != '\n'); // Limpa o buffer de entrada
+                    break;
+                }
                 atender_cliente(num_caixa);
-                }
                 break;
-            case 3:
-                { int num_caixa;
-                printf("Fechar Caixa: "); scanf("%d", &num_caixa);
+            }
+            case 3: {
+                int num_caixa;
+                printf("Fechar Caixa: ");
+                if (scanf("%d", &num_caixa) != 1 || num_caixa < 1 || num_caixa > MAX_CAIXAS) {
+                    printf("Número do caixa inválido! Digite um valor entre 1 e %d.\n", MAX_CAIXAS);
+                    while (getchar() != '\n'); // Limpa o buffer de entrada
+                    break;
+                }
                 fechar_caixa(num_caixa);
-                }
                 break;
+            }
             case 4:
                 listar_clientes();
                 break;
             case 5:
                 listar_status_caixas();
                 break;
+            case 0:
+                printf("Saindo...\n");
+                break;
+            default:
+                printf("Opção inválida! Tente novamente.\n");
         }
     } while (opcao != 0);
 }
