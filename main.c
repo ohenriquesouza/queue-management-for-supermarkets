@@ -27,6 +27,7 @@ Cliente* criar_cliente(char *nome, char *cpf, int prioridade, int itens);
 void inserir_cliente(int num_caixa, Cliente *cliente);
 void atender_cliente(int num_caixa);
 void fechar_caixa(int num_caixa);
+void abrir_caixa(int num_caixa);
 void listar_clientes();
 void listar_status_caixas();
 int contar_caixas_abertos();
@@ -129,6 +130,16 @@ void fechar_caixa(int num_caixa) {
     printf("Caixa %d fechado. Clientes transferidos para o caixa %d.\n", num_caixa, outro_caixa);
 }
 
+void abrir_caixa(int num_caixa) {
+    if (caixas[num_caixa - 1].aberto) {
+        printf("Caixa %d já está aberto.\n", num_caixa);
+        return;
+    }
+
+    caixas[num_caixa - 1].aberto = 1;
+    printf("O caixa %d foi aberto e está pronto para receber clientes.\n", num_caixa);
+}
+
 int contar_caixas_abertos() {
     int count = 0;
     for (int i = 0; i < MAX_CAIXAS; i++) {
@@ -166,7 +177,7 @@ void menu() {
     int opcao;
     inicializar_caixas();
     do {
-        printf("\n1. Cadastrar Cliente\n2. Atender Cliente\n3. Fechar Caixa\n4. Listar Clientes\n5. Status dos Caixas\n0. Sair\nEscolha: ");
+        printf("\n1. Cadastrar Cliente\n2. Atender Cliente\n3. Fechar ou Abrir Caixa\n4. Listar Clientes\n5. Status dos Caixas\n0. Sair\nEscolha: ");
         if (scanf("%d", &opcao) != 1) {
             printf("Entrada inválida! Digite um número.\n");
             while (getchar() != '\n'); // Limpa o buffer de entrada
@@ -216,13 +227,17 @@ void menu() {
             }
             case 3: {
                 int num_caixa;
-                printf("Fechar Caixa: ");
+                printf("Número do Caixa: ");
                 if (scanf("%d", &num_caixa) != 1 || num_caixa < 1 || num_caixa > MAX_CAIXAS) {
                     printf("Número do caixa inválido! Digite um valor entre 1 e %d.\n", MAX_CAIXAS);
                     while (getchar() != '\n'); // Limpa o buffer de entrada
                     break;
                 }
-                fechar_caixa(num_caixa);
+                if (caixas[num_caixa - 1].aberto) {
+                    fechar_caixa(num_caixa);
+                } else {
+                    abrir_caixa(num_caixa);
+                }
                 break;
             }
             case 4:
